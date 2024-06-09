@@ -146,18 +146,21 @@ public:
 // При делении на 0 выбрасывайте ошибку вычисления FormulaError
     double Evaluate(SearchValue foo) const override {
         double result = 0.0;
+
+        auto rhs_local = rhs_->Evaluate(foo);
+        auto lhs_local = lhs_->Evaluate(foo);
         switch(type_) {
             case Type::Add:
-                result = lhs_->Evaluate(foo) + rhs_->Evaluate(foo);
+                result = lhs_local + rhs_local;
                 break;
             case Type::Divide:
-                result = lhs_->Evaluate(foo) / rhs_->Evaluate(foo);
+                result = lhs_local / rhs_local;
                 break;
             case Type::Multiply:
-                result = lhs_->Evaluate(foo) * rhs_->Evaluate(foo);
+                result = lhs_local * rhs_local;
                 break;
             case Type::Subtract:
-                result = lhs_->Evaluate(foo) - rhs_->Evaluate(foo);
+                result = lhs_local - rhs_local;
                 break;
             default:
                 assert(false);
@@ -206,14 +209,14 @@ public:
 
 // Реализуйте метод Evaluate() для унарных операций.
     double Evaluate(SearchValue foo) const override {
-        switch (type_) {
-            case Type::UnaryPlus:
-                return +operand_->Evaluate(foo);
-            case Type::UnaryMinus:
-                return -operand_->Evaluate(foo);
-            default:
-                assert(false);
+        double result = 0.0;
+
+        if( type_ == Type::UnaryPlus ) {
+            result = +operand_->Evaluate(foo);
+        } else if( type_ == Type::UnaryMinus ) {
+            result = -operand_->Evaluate(foo);
         }
+        return result;
     }
 
 private:
