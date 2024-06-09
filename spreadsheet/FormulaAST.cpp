@@ -72,7 +72,7 @@ public:
     virtual ~Expr() = default;
     virtual void Print(std::ostream& out) const = 0;
     virtual void DoPrintFormula(std::ostream& out, ExprPrecedence precedence) const = 0;
-    virtual double Evaluate(/*добавьте сюда нужные аргументы*/ args) const = 0;
+    virtual double Evaluate(SearchValue foo) const = 0;
 
     // higher is tighter
     virtual ExprPrecedence GetPrecedence() const = 0;
@@ -142,8 +142,32 @@ public:
         }
     }
 
-    double Evaluate(/*добавьте нужные аргументы*/) const override {
-			// Скопируйте ваше решение из предыдущих уроков.
+// Реализуйте метод Evaluate() для бинарных операций.
+// При делении на 0 выбрасывайте ошибку вычисления FormulaError
+    double Evaluate(SearchValue foo) const override {
+        double result = 0.0;
+        switch(type_) {
+            case Type::Add:
+                result = lhs_->Evaluate(foo) + rhs_->Evaluate(foo);
+                break;
+            case Type::Divide:
+                result = lhs_->Evaluate(foo) / rhs_->Evaluate(foo);
+                break;
+            case Type::Multiply:
+                result = lhs_->Evaluate(foo) * rhs_->Evaluate(foo);
+                break;
+            case Type::Subtract:
+                result = lhs_->Evaluate(foo) - rhs_->Evaluate(foo);
+                break;
+            default:
+                assert(false);
+        }
+
+        if( !std::isfinite(result)) {
+            throw FormulaError(FormulaError::Category::Arithmetic);
+        }
+
+        return result;
     }
 
 private:
@@ -180,8 +204,16 @@ public:
         return EP_UNARY;
     }
 
-    double Evaluate(/*добавьте нужные аргументы*/ args) const override {
-        // Скопируйте ваше решение из предыдущих уроков.
+// Реализуйте метод Evaluate() для унарных операций.
+    double Evaluate(SearchValue foo) const override {
+        switch (type_) {
+            case Type::UnaryPlus:
+                return +operand_->Evaluate(foo);
+            case Type::UnaryMinus:
+                return -operand_->Evaluate(foo);
+            default:
+                assert(false);
+        }
     }
 
 private:
@@ -211,8 +243,8 @@ public:
         return EP_ATOM;
     }
 
-    double Evaluate(/*добавьте нужные аргументы*/ args) const override {
-        // реализуйте метод.
+    double Evaluate(SearchValue foo) const override {
+        return foo(*cell_);
     }
 
 private:
@@ -237,7 +269,8 @@ public:
         return EP_ATOM;
     }
 
-    double Evaluate(/*добавьте нужные аргументы*/ args) const override {
+// Для чисел метод возвращает значение числа.
+    double Evaluate(SearchValue foo) const override {
         return value_;
     }
 
@@ -374,14 +407,14 @@ FormulaAST ParseFormulaAST(std::istream& in) {
 
 FormulaAST ParseFormulaAST(const std::string& in_str) {
     std::istringstream in(in_str);
-    return ParseFormulaAST(in);
+        return ParseFormulaAST(in);
 }
 
-void FormulaAST::PrintCells(std::ostream& out) const {
-    for (auto cell : cells_) {
-        out << cell.ToString() << ' ';
-    }
-}
+// void FormulaAST::PrintCells(std::ostream& out) const {
+//     for (auto cell : cells_) {
+//         out << cell.ToString() << ' ';
+//     }
+// }
 
 void FormulaAST::Print(std::ostream& out) const {
     root_expr_->Print(out);
@@ -391,8 +424,8 @@ void FormulaAST::PrintFormula(std::ostream& out) const {
     root_expr_->PrintFormula(out, ASTImpl::EP_ATOM);
 }
 
-double FormulaAST::Execute(/*добавьте нужные аргументы*/ args) const {
-    return root_expr_->Evaluate(/*добавьте нужные аргументы*/ args);
+double FormulaAST::Execute(SearchValue foo) const {
+    return root_expr_->Evaluate(foo);
 }
 
 FormulaAST::FormulaAST(std::unique_ptr<ASTImpl::Expr> root_expr, std::forward_list<Position> cells)
